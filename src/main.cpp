@@ -149,6 +149,8 @@ public:
         return {dist, pred};
     }
 
+    // Reconstruir o caminho mais curto entre dois vértices
+    //  Usando a matriz de predecessores
     vector<int> reconstruirCaminho(const vector<vector<int>> &pred, int origem, int destino)
     {
         vector<int> caminho;
@@ -211,6 +213,59 @@ public:
         }
 
         return intermediacao;
+    }
+
+    // Calcular o caminho médio do grafo
+    double calcularCaminhoMedio()
+    {
+        // Obter matriz de distâncias usando Floyd-Warshall
+        auto [dist, pred] = floydWarshall();
+
+        double soma_distancias = 0.0;
+        int count = 0;
+
+        // Somar as distâncias entre todos os pares de vértices
+        for (int i = 1; i <= num_vertices; i++)
+        {
+            for (int j = 1; j <= num_vertices; j++)
+            {
+                // Ignorar o próprio vértice e caminhos inexistentes
+                if (i != j && dist[i][j] != numeric_limits<double>::infinity())
+                {
+                    soma_distancias += dist[i][j];
+                    count++;
+                }
+            }
+        }
+
+        // Calcular a média
+        double caminho_medio = (count > 0) ? (soma_distancias / count) : 0.0;
+
+        return caminho_medio;
+    }
+
+    // Calcular o diâmetro do grafo
+    double calcularDiametro()
+    {
+        // Obter matriz de distâncias usando Floyd-Warshall
+        auto [dist, pred] = floydWarshall();
+
+        double diametro = 0.0;
+
+        // Encontrar a maior distância finita entre quaisquer dois vértices
+        for (int i = 1; i <= num_vertices; i++)
+        {
+            for (int j = 1; j <= num_vertices; j++)
+            {
+                // Ignorar o próprio vértice e caminhos inexistentes
+                if (i != j && dist[i][j] != numeric_limits<double>::infinity())
+                {
+                    diametro = max(diametro, dist[i][j]);
+                }
+            }
+        }
+
+        return diametro;
     }
 
     void lerArquivoDados(const string &nome_arquivo)
@@ -388,6 +443,8 @@ public:
         {
             cout << "   Vértice " << v << ": " << fixed << setprecision(2) << cent << endl;
         }
+        cout << "12. Caminho médio do grafo: " << fixed << setprecision(2) << calcularCaminhoMedio() << endl;
+        cout << "13. Diâmetro do grafo: " << fixed << setprecision(2) << calcularDiametro() << endl;
     }
 };
 
