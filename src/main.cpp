@@ -34,7 +34,7 @@ MetricasGrafo processarArquivoGrafo(const string &caminho_arquivo)
     MetricasGrafo metricas;
 
     // Salva as estatísticas do grafo
-    metricas.nome = fs::path(caminho_arquivo).filename().string();
+    metricas.nome = grafo.getNomeArquivo();
     metricas.num_vertices = grafo.getNumVertices();
     metricas.num_arestas = grafo.getNumEdges();
     metricas.num_arcos = grafo.getNumArcs();
@@ -77,6 +77,25 @@ void exportarParaCSV(const vector<MetricasGrafo> &todas_metricas, const string &
     }
 
     arquivo_csv.close();
+
+    // Exportar a centralidade de intermediação separadamente
+    std::ofstream arquivo_intermediacao("resultados_intermediacao.csv");
+
+    // Cabeçalho
+    arquivo_intermediacao << "NomeGrafo,Vertice,CentralidadeIntermediacao\n";
+
+    // Dados de intermediação para cada grafo
+    for (const auto &m : todas_metricas)
+    {
+        for (const auto &[vertice, centralidade] : m.intermediacao)
+        {
+            arquivo_intermediacao << m.nome << ","
+                                  << vertice << ","
+                                  << centralidade << "\n";
+        }
+    }
+
+    arquivo_intermediacao.close();
 }
 
 int main()

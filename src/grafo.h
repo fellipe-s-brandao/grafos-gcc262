@@ -35,6 +35,7 @@ public:
     Grafo();
 
     int getNumVertices() const { return num_vertices; }
+    string getNomeArquivo() const { return nome; }
     int getNumEdges() const { return arestas.size(); }
     int getNumArcs() const { return arcos.size(); }
     int getNumRequiredVertices() const { return vertices_requeridos.size(); }
