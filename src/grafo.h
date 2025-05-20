@@ -11,6 +11,18 @@
 
 using namespace std;
 
+// Estrutura para representar um serviço
+struct Servico
+{
+    int id;
+    char tipo; // 'N', 'E', ou 'A'
+    int origem;
+    int destino;
+    int demanda;
+    int custo_servico;
+    int custo_transporte;
+};
+
 class Grafo
 {
 private:
@@ -26,8 +38,15 @@ private:
     set<pair<int, int>> arestas_requeridas;
     set<pair<int, int>> arcos_requeridos;
 
-    // deposito inicial
-    int deposito;
+    // Novos campos para a Etapa 2
+    vector<Servico> servicos; // Lista de todos os serviços
+    int valor_otimo;          // Valor ótimo da solução
+    int num_veiculos;         // Número de veículos
+    int capacidade;           // Capacidade dos veículos
+    int deposito;             // Nó depósito
+
+    vector<vector<double>> matriz_dist; // Matriz de distâncias
+    vector<vector<int>> matriz_pred;    // Matriz de predecessores
 
     string nome;
 
@@ -42,6 +61,11 @@ public:
     int getNumRequiredEdges() const { return arestas_requeridas.size(); }
     int getNumRequiredArcs() const { return arcos_requeridos.size(); }
     string getNome() const { return nome; }
+
+    // Novos getters
+    int getCapacidade() const { return capacidade; }
+    int getDeposito() const { return deposito; }
+    const vector<Servico> &getServicos() const { return servicos; }
 
     double calcularDensidade();
     map<int, int> calcularGraus();
@@ -62,6 +86,11 @@ public:
 
     // Calcular o diâmetro do grafo
     double calcularDiametro();
+
+    // Novos métodos
+    void calcularCaminhosMaisCurtos();
+    double getDistancia(int origem, int destino) const;
+    vector<int> obterCaminho(int origem, int destino) const;
 
     void lerArquivoDados(const string &nome_arquivo);
 };

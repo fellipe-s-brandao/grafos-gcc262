@@ -5,7 +5,7 @@
 #include <queue>
 #include <cmath>
 
-Grafo::Grafo() : num_vertices(0), deposito(0) {}
+Grafo::Grafo() : num_vertices(0), deposito(0), valor_otimo(-1), num_veiculos(-1), capacidade(0) {}
 
 double Grafo::calcularDensidade()
 {
@@ -236,8 +236,152 @@ double Grafo::calcularDiametro()
     return diametro;
 }
 
+// Método para calcular caminhos mais curtos usando o resultado de Floyd-Warshall
+void Grafo::calcularCaminhosMaisCurtos()
+{
+    cout << "Iniciando cálculo de caminhos mais curtos..." << endl;
+    
+    // Inicializar as matrizes com o tamanho correto
+    matriz_dist.clear();
+    matriz_pred.clear();
+    
+    matriz_dist.resize(num_vertices + 1, vector<double>(num_vertices + 1, numeric_limits<double>::infinity()));
+    matriz_pred.resize(num_vertices + 1, vector<int>(num_vertices + 1, -1));
+    
+    // A distância de um vértice para ele mesmo é 0
+    for (int i = 1; i <= num_vertices; i++)
+    {
+        matriz_dist[i][i] = 0;
+        matriz_pred[i][i] = i;  // Predecessor de um nó para ele mesmo é o próprio nó
+    }
+    
+    // Define as distâncias iniciais com base na lista de adjacência
+    for (const auto &[u, vizinhos] : adj)
+    {
+        for (const auto &[v, peso] : vizinhos)
+        {
+            matriz_dist[u][v] = peso;
+            matriz_pred[u][v] = u;
+        }
+    }
+    
+    // Algoritmo de Floyd-Warshall
+    for (int k = 1; k <= num_vertices; k++)
+    {
+        cout << "Processando vértice intermediário " << k << "/" << num_vertices << endl;
+        for (int i = 1; i <= num_vertices; i++)
+        {
+            for (int j = 1; j <= num_vertices; j++)
+            {
+                if (matriz_dist[i][k] != numeric_limits<double>::infinity() &&
+                    matriz_dist[k][j] != numeric_limits<double>::infinity() &&
+                    matriz_dist[i][k] + matriz_dist[k][j] < matriz_dist[i][j])
+                {
+                    matriz_dist[i][j] = matriz_dist[i][k] + matriz_dist[k][j];
+                    matriz_pred[i][j] = matriz_pred[k][j];
+                }
+            }
+        }
+    }
+    
+    cout << "Cálculo de caminhos mais curtos concluído!" << endl;
+}
+// Método para obter a distância entre dois vértices
+double Grafo::getDistancia(int origem, int destino) const
+{
+    // Verificação de limites
+    if (origem <= 0 || origem > num_vertices || destino <= 0 || destino > num_vertices)
+    {
+        cerr << "Erro em getDistancia: Índices fora dos limites - origem=" << origem << ", destino=" << destino << ", num_vertices=" << num_vertices << endl;
+        return numeric_limits<double>::infinity();
+    }
+    
+    // Verifica se a matriz está inicializada corretamente
+    if (matriz_dist.empty() || matriz_dist.size() <= (size_t)origem || 
+        matriz_dist[origem].empty() || matriz_dist[origem].size() <= (size_t)destino)
+    {
+        cerr << "Erro em getDistancia: Matriz de distâncias não inicializada corretamente!" << endl;
+        cerr << "matriz_dist.size()=" << matriz_dist.size() << ", origem=" << origem << endl;
+        if (!matriz_dist.empty() && matriz_dist.size() > (size_t)origem) {
+            cerr << "matriz_dist[origem].size()=" << matriz_dist[origem].size() << ", destino=" << destino << endl;
+        }
+        return numeric_limits<double>::infinity();
+    }
+    
+    return matriz_dist[origem][destino];
+}
+
+// Método para obter o caminho entre dois vértices
+vector<int> Grafo::obterCaminho(int origem, int destino) const
+{
+    if (origem == destino) {
+        return {origem}; // Retorna um caminho contendo apenas o próprio nó
+    }
+    
+    // Verificação de limites
+    if (origem <= 0 || origem > num_vertices || destino <= 0 || destino > num_vertices)
+    {
+        cerr << "Erro em obterCaminho: Índices fora dos limites - origem=" << origem << ", destino=" << destino << ", num_vertices=" << num_vertices << endl;
+        return vector<int>();
+    }
+    
+    // Verifica se a matriz está inicializada corretamente
+    if (matriz_pred.empty() || matriz_pred.size() <= (size_t)origem || 
+        matriz_pred[origem].empty() || matriz_pred[origem].size() <= (size_t)destino)
+    {
+        cerr << "Erro em obterCaminho: Matriz de predecessores não inicializada corretamente!" << endl;
+        cerr << "matriz_pred.size()=" << matriz_pred.size() << ", origem=" << origem << endl;
+        if (!matriz_pred.empty() && matriz_pred.size() > (size_t)origem) {
+            cerr << "matriz_pred[origem].size()=" << matriz_pred[origem].size() << ", destino=" << destino << endl;
+        }
+        return vector<int>();
+    }
+    
+    vector<int> caminho;
+    
+    // Se não existe caminho
+    if (matriz_pred[origem][destino] == -1)
+    {
+        cerr << "Aviso: Não existe caminho de " << origem << " para " << destino << endl;
+        return caminho;
+    }
+    
+    // Reconstruir o caminho do destino até a origem
+    int atual = destino;
+    while (atual != origem)
+    {
+        caminho.push_back(atual);
+        atual = matriz_pred[origem][atual];
+        
+        // Evitar loop infinito se houver inconsistência
+        if (caminho.size() > num_vertices)
+        {
+            cerr << "Erro em obterCaminho: Loop detectado na reconstrução do caminho de " << origem << " para " << destino << endl;
+            return vector<int>();
+        }
+    }
+    caminho.push_back(origem);
+    
+    // Inverter o caminho para ficar da origem para o destino
+    reverse(caminho.begin(), caminho.end());
+    
+    return caminho;
+}
 void Grafo::lerArquivoDados(const string &nome_arquivo)
 {
+    vertices.clear();
+    vertices_requeridos.clear();
+    arestas.clear();
+    arestas_requeridas.clear();
+    arcos.clear();
+    arcos_requeridos.clear();
+    adj.clear();
+    servicos.clear();
+    matriz_dist.clear();
+    matriz_pred.clear();
+    
+    cout << "Lendo arquivo: " << nome_arquivo << endl;
+    
     ifstream arquivo(nome_arquivo);
     if (!arquivo.is_open())
     {
@@ -251,18 +395,30 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
     getline(arquivo, linha);
     nome = linha.substr(linha.find_first_of(":") + 1);
     nome = nome.substr(nome.find_first_not_of(" \t"));
+    cout << "Nome da instância: " << nome << endl;
 
-    getline(arquivo, linha); // Optimal value
-    getline(arquivo, linha); // #Vehicles
-    getline(arquivo, linha); // Capacity
+    // Valor ótimo
+    getline(arquivo, linha);
+    valor_otimo = stoi(linha.substr(linha.find_first_of(":") + 1));
+
+    // Número de veículos
+    getline(arquivo, linha);
+    num_veiculos = stoi(linha.substr(linha.find_first_of(":") + 1));
+
+    // Capacidade
+    getline(arquivo, linha);
+    capacidade = stoi(linha.substr(linha.find_first_of(":") + 1));
+    cout << "Capacidade: " << capacidade << endl;
 
     // Depósito
     getline(arquivo, linha);
     deposito = stoi(linha.substr(linha.find_first_of(":") + 1));
+    cout << "Depósito: " << deposito << endl;
 
     // Número de nós
     getline(arquivo, linha);
     num_vertices = stoi(linha.substr(linha.find_first_of(":") + 1));
+    cout << "Número de vértices: " << num_vertices << endl;
 
     // Número de arestas e arcos
     int num_arestas, num_arcos;
@@ -283,16 +439,21 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
 
     getline(arquivo, linha);
     num_arcos_requeridos = stoi(linha.substr(linha.find_first_of(":") + 1));
+    
+    cout << "Requeridos - Nós: " << num_vertices_requeridos << ", Arestas: " << num_arestas_requeridas << ", Arcos: " << num_arcos_requeridos << endl;
 
     for (int i = 1; i <= num_vertices; i++)
     {
         vertices.insert(i);
     }
 
+    int id_servico = 1; // Contador para o ID do serviço
+
     // Ler até encontrar "ReN."
     while (getline(arquivo, linha) && linha.find("ReN.") == string::npos)
         ;
 
+    cout << "Lendo nós requeridos..." << endl;
     // Ler nós requeridos
     for (int i = 0; i < num_vertices_requeridos; i++)
     {
@@ -305,12 +466,26 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
 
         int node = stoi(nome_no.substr(1)); // Remove o 'N'
         vertices_requeridos.insert(node);
+
+        // Criar serviço para o nó
+        Servico servico;
+        servico.id = id_servico++;
+        servico.tipo = 'N';
+        servico.origem = node;
+        servico.destino = node;
+        servico.demanda = demanda;
+        servico.custo_servico = custo_servico;
+        servico.custo_transporte = 0;
+
+        servicos.push_back(servico);
+        cout << "Serviço " << servico.id << ": Nó " << node << ", Demanda " << demanda << ", Custo " << custo_servico << endl;
     }
 
     // Ler até encontrar "ReE."
     while (getline(arquivo, linha) && linha.find("ReE.") == string::npos)
         ;
 
+    cout << "Lendo arestas requeridas..." << endl;
     // Ler arestas requeridas
     for (int i = 0; i < num_arestas_requeridas; i++)
     {
@@ -326,18 +501,36 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
         arestas_requeridas.insert({u, v});
         adj[u].push_back({v, custo_travessia});
         adj[v].push_back({u, custo_travessia});
+
+        // Criar serviço para a aresta
+        Servico servico;
+        servico.id = id_servico++;
+        servico.tipo = 'E';
+        servico.origem = u;
+        servico.destino = v;
+        servico.demanda = demanda;
+        servico.custo_servico = custo_servico;
+        servico.custo_transporte = custo_travessia;
+
+        servicos.push_back(servico);
+        cout << "Serviço " << servico.id << ": Aresta (" << u << "," << v << "), Demanda " << demanda << ", Custo " << custo_servico << endl;
     }
 
     // Pular até "EDGE"
     while (getline(arquivo, linha) && linha.find("EDGE") == string::npos)
         ;
 
+    cout << "Lendo arestas não requeridas..." << endl;
     // Ler arestas não requeridas
-    for (int i = 0; i < num_arestas - num_arestas_requeridas; i++)
+    getline(arquivo, linha); // Pular linha em branco
+    
+    while (getline(arquivo, linha) && !linha.empty() && linha.find("ReA.") == string::npos)
     {
-        getline(arquivo, linha);
-        if (linha.empty())
-            break;
+        // Se a linha estiver vazia, continue
+        if (linha.find_first_not_of(" \t\n\r") == string::npos)
+        {
+            continue;
+        }
 
         stringstream ss(linha);
         string edge_name;
@@ -351,10 +544,17 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
         adj[v].push_back({u, custo_travessia});
     }
 
-    // Pular até "ReA."
+    // Se encontrou ReA, precisa retroceder uma linha no arquivo
+    if (!linha.empty() && linha.find("ReA.") != string::npos)
+    {
+        arquivo.seekg(-linha.length() - 1, ios_base::cur);
+    }
+
+    // Ler até encontrar "ReA."
     while (getline(arquivo, linha) && linha.find("ReA.") == string::npos)
         ;
 
+    cout << "Lendo arcos requeridos..." << endl;
     // Arcos requeridos
     for (int i = 0; i < num_arcos_requeridos; i++)
     {
@@ -369,29 +569,56 @@ void Grafo::lerArquivoDados(const string &nome_arquivo)
         arcos.push_back({u, v});
         arcos_requeridos.insert({u, v});
         adj[u].push_back({v, custo_travessia});
+
+        // Criar serviço para o arco
+        Servico servico;
+        servico.id = id_servico++;
+        servico.tipo = 'A';
+        servico.origem = u;
+        servico.destino = v;
+        servico.demanda = demanda;
+        servico.custo_servico = custo_servico;
+        servico.custo_transporte = custo_travessia;
+
+        servicos.push_back(servico);
+        cout << "Serviço " << servico.id << ": Arco (" << u << "," << v << "), Demanda " << demanda << ", Custo " << custo_servico << endl;
     }
 
     // Pular até "ARC"
     while (getline(arquivo, linha) && linha.find("ARC") == string::npos)
         ;
 
+    cout << "Lendo arcos não requeridos..." << endl;
     // Arcos não requeridos
-    for (int i = 0; i < num_arcos - num_arcos_requeridos; i++)
+    getline(arquivo, linha); // Pular linha em branco
+    
+    while (getline(arquivo, linha) && !linha.empty())
     {
-        getline(arquivo, linha);
-        if (linha.empty())
-            break;
+        // Se a linha estiver vazia, continue
+        if (linha.find_first_not_of(" \t\n\r") == string::npos)
+        {
+            continue;
+        }
 
         stringstream ss(linha);
         string arc_name;
         int u, v;
         double custo_travessia;
 
-        ss >> arc_name >> u >> v >> custo_travessia;
+        if (!(ss >> arc_name >> u >> v >> custo_travessia))
+        {
+            continue; // Linha mal formatada, pular
+        }
 
         arcos.push_back({u, v});
         adj[u].push_back({v, custo_travessia});
     }
 
     arquivo.close();
+    
+    cout << "Leitura do arquivo concluída." << endl;
+    cout << "Total de serviços: " << servicos.size() << endl;
+
+    // Calcular caminhos mais curtos
+    calcularCaminhosMaisCurtos();
 }
