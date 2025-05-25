@@ -39,179 +39,44 @@ struct Solucao
     }
 };
 
-Solucao solucaoInicial(const Grafo &grafo)
+Solucao solucaoInicial(const Grafo &grafo, clock_t &inicio_execucao)
 {
     Solucao solucao;
-    clock_t inicio = clock();
+    clock_t inicio = inicio_execucao;
 
-    cout << "Iniciando construção da solução inicial com base em caminhos..." << endl;
+    cout << "Iniciando construção da solução inicial..." << endl;
 
     int deposito = grafo.getDeposito();
     const vector<Servico> &servicos = grafo.getServicos();
 
-    // Identificar os serviços que saem diretamente do depósito
-    vector<int> servicos_deposito;
-    for (int i = 0; i < servicos.size(); i++)
-    {
-        const auto &servico = servicos[i];
-        if (servico.origem == deposito)
-        {
-            servicos_deposito.push_back(i + 1); // IDs começam em 1
-        }
-    }
+    cout << "Total de serviços: " << servicos.size() << endl;
+    cout << "Capacidade do veículo: " << grafo.getCapacidade() << endl;
 
-    cout << "Serviços que saem do depósito: " << servicos_deposito.size() << endl;
-
-    // Lista de serviços não atribuídos (começamos com todos)
+    // Lista de todos os serviços não atribuídos
     vector<int> servicos_nao_atribuidos;
     for (int i = 0; i < servicos.size(); i++)
     {
-        if (find(servicos_deposito.begin(), servicos_deposito.end(), i + 1) == servicos_deposito.end())
-        {
-            servicos_nao_atribuidos.push_back(i + 1); // IDs começam em 1
-        }
+        servicos_nao_atribuidos.push_back(i + 1);
     }
 
-    cout << "Serviços não atribuídos inicialmente: " << servicos_nao_atribuidos.size() << endl;
-
-    // Criar rotas a partir de cada serviço que sai do depósito
     vector<Rota> rotas;
+    int contador_rotas = 0;
 
-    for (int id_servico_deposito : servicos_deposito)
-    {
-        Rota rota;
-        const auto &servico = servicos[id_servico_deposito - 1];
-
-        // Adicionar o serviço do depósito à rota
-        rota.nos.push_back({id_servico_deposito, servico.origem});
-        rota.demanda_total = servico.demanda;
-        rota.custo_total = servico.custo_servico;
-
-        // Nó atual após o serviço
-        int no_atual = servico.destino;
-
-        // Continuar adicionando serviços enquanto for possível
-        bool adicionou_servico = true;
-        vector<int> servicos_atribuidos = {id_servico_deposito};
-
-        while (adicionou_servico && !servicos_nao_atribuidos.empty() &&
-               rota.demanda_total < grafo.getCapacidade())
-        {
-            adicionou_servico = false;
-
-            // Encontrar o serviço mais próximo do nó atual que pode ser atendido
-            int melhor_servico = -1;
-            int melhor_no = -1;
-            double menor_custo = numeric_limits<double>::infinity();
-
-            for (int i = 0; i < servicos_nao_atribuidos.size(); i++)
-            {
-                int id_servico = servicos_nao_atribuidos[i];
-                const Servico &servico = servicos[id_servico - 1];
-
-                // Verificar se o serviço cabe na capacidade restante
-                if (rota.demanda_total + servico.demanda <= grafo.getCapacidade())
-                {
-                    // Calcular custo para chegar ao serviço
-                    double custo_para_origem = grafo.getDistancia(no_atual, servico.origem);
-                    double custo_para_destino = grafo.getDistancia(no_atual, servico.destino);
-
-                    // Escolher o nó de entrada (origem ou destino) com menor custo
-                    double custo;
-                    int no_entrada;
-
-                    if (servico.tipo == 'N')
-                    {
-                        custo = custo_para_origem;
-                        no_entrada = servico.origem;
-                    }
-                    else if (servico.tipo == 'A')
-                    {
-                        // Para arcos, só podemos entrar pela origem
-                        custo = custo_para_origem;
-                        no_entrada = servico.origem;
-                    }
-                    else
-                    { // 'E'
-                        // Para arestas, podemos entrar por qualquer extremidade
-                        if (custo_para_origem <= custo_para_destino)
-                        {
-                            custo = custo_para_origem;
-                            no_entrada = servico.origem;
-                        }
-                        else
-                        {
-                            custo = custo_para_destino;
-                            no_entrada = servico.destino;
-                        }
-                    }
-
-                    // Atualizar o melhor serviço encontrado
-                    if (custo < menor_custo)
-                    {
-                        menor_custo = custo;
-                        melhor_servico = id_servico;
-                        melhor_no = no_entrada;
-                    }
-                }
-            }
-
-            // Se encontrou um serviço viável
-            if (melhor_servico != -1)
-            {
-                const Servico &servico = servicos[melhor_servico - 1];
-
-                // Adicionar o custo do caminho para o serviço
-                rota.custo_total += grafo.getDistancia(no_atual, melhor_no);
-
-                // Adicionar o serviço à rota
-                rota.nos.push_back({melhor_servico, melhor_no});
-                rota.demanda_total += servico.demanda;
-                rota.custo_total += servico.custo_servico;
-
-                // Atualizar o nó atual
-                if (servico.tipo == 'N')
-                {
-                    no_atual = servico.origem;
-                }
-                else if (servico.tipo == 'A')
-                {
-                    no_atual = servico.destino;
-                }
-                else
-                { // 'E'
-                    no_atual = (melhor_no == servico.origem) ? servico.destino : servico.origem;
-                }
-
-                // Remover o serviço da lista de não atribuídos
-                servicos_atribuidos.push_back(melhor_servico);
-                auto it = find(servicos_nao_atribuidos.begin(), servicos_nao_atribuidos.end(), melhor_servico);
-                if (it != servicos_nao_atribuidos.end())
-                {
-                    servicos_nao_atribuidos.erase(it);
-                }
-
-                adicionou_servico = true;
-            }
-        }
-
-        // Adicionar o custo de volta ao depósito
-        rota.custo_total += grafo.getDistancia(no_atual, deposito);
-
-        // Adicionar a rota à solução
-        rotas.push_back(rota);
-
-        cout << "Rota criada com " << rota.nos.size() << " serviços, demanda " << rota.demanda_total
-             << ", custo " << rota.custo_total << endl;
-    }
-
-    cout << "Rotas criadas: " << rotas.size() << endl;
-    cout << "Serviços não atribuídos: " << servicos_nao_atribuidos.size() << endl;
-
-    // Se ainda houver serviços não atribuídos, criar rotas adicionais
+    // Criar rotas até que todos os serviços sejam atendidos
     while (!servicos_nao_atribuidos.empty())
     {
-        // Procurar o serviço não atribuído mais próximo do depósito
+        contador_rotas++;
+        cout << "Criando rota " << contador_rotas << " (serviços restantes: "
+             << servicos_nao_atribuidos.size() << ")" << endl;
+
+        // Evitar loop infinito
+        if (contador_rotas > 50)
+        {
+            cout << "AVISO: Muitas rotas criadas. Parando para evitar loop infinito." << endl;
+            break;
+        }
+
+        // Encontrar o serviço mais próximo do depósito
         int melhor_servico = -1;
         int melhor_no = -1;
         double menor_custo = numeric_limits<double>::infinity();
@@ -220,11 +85,9 @@ Solucao solucaoInicial(const Grafo &grafo)
         {
             const Servico &servico = servicos[id_servico - 1];
 
-            // Calcular custo para chegar ao serviço
             double custo_para_origem = grafo.getDistancia(deposito, servico.origem);
             double custo_para_destino = grafo.getDistancia(deposito, servico.destino);
 
-            // Escolher o nó de entrada (origem ou destino) com menor custo
             double custo;
             int no_entrada;
 
@@ -235,13 +98,11 @@ Solucao solucaoInicial(const Grafo &grafo)
             }
             else if (servico.tipo == 'A')
             {
-                // Para arcos, só podemos entrar pela origem
                 custo = custo_para_origem;
                 no_entrada = servico.origem;
             }
-            else
-            { // 'E'
-                // Para arestas, podemos entrar por qualquer extremidade
+            else // 'E'
+            {
                 if (custo_para_origem <= custo_para_destino)
                 {
                     custo = custo_para_origem;
@@ -254,7 +115,6 @@ Solucao solucaoInicial(const Grafo &grafo)
                 }
             }
 
-            // Atualizar o melhor serviço encontrado
             if (custo < menor_custo)
             {
                 menor_custo = custo;
@@ -263,173 +123,167 @@ Solucao solucaoInicial(const Grafo &grafo)
             }
         }
 
-        if (melhor_servico != -1)
+        if (melhor_servico == -1)
         {
-            // Criar uma nova rota com este serviço
-            Rota rota;
-            const Servico &servico = servicos[melhor_servico - 1];
+            cout << "ERRO: Não foi possível encontrar um serviço válido!" << endl;
+            break;
+        }
 
-            // Adicionar o serviço à rota
-            rota.nos.push_back({melhor_servico, melhor_no});
-            rota.demanda_total = servico.demanda;
-            rota.custo_total = grafo.getDistancia(deposito, melhor_no) + servico.custo_servico;
+        // Criar nova rota começando com o melhor serviço
+        Rota rota;
+        const Servico &servico = servicos[melhor_servico - 1];
 
-            // Atualizar o nó atual
-            int no_atual;
-            if (servico.tipo == 'N')
-            {
-                no_atual = servico.origem;
+        rota.nos.push_back({melhor_servico, melhor_no});
+        rota.demanda_total = servico.demanda;
+        rota.custo_total = grafo.getDistancia(deposito, melhor_no) + servico.custo_servico;
+
+        // Determinar nó atual após executar o serviço
+        int no_atual;
+        if (servico.tipo == 'N')
+        {
+            no_atual = servico.origem;
+        }
+        else if (servico.tipo == 'A')
+        {
+            no_atual = servico.destino;
+        }
+        else // 'E'
+        {
+            no_atual = (melhor_no == servico.origem) ? servico.destino : servico.origem;
+        }
+
+        // Remover serviço da lista
+        auto it = find(servicos_nao_atribuidos.begin(), servicos_nao_atribuidos.end(), melhor_servico);
+        if (it != servicos_nao_atribuidos.end())
+        {
+            servicos_nao_atribuidos.erase(it);
+        }
+
+        // Continuar adicionando serviços à rota atual
+        bool adicionou_servico = true;
+        int tentativas = 0;
+
+        while (adicionou_servico && !servicos_nao_atribuidos.empty() &&
+               rota.demanda_total < grafo.getCapacidade())
+        {
+            tentativas++;
+            if (tentativas > 200)
+            { // Evitar loop infinito interno
+                cout << "AVISO: Muitas tentativas na rota atual. Finalizando rota." << endl;
+                break;
             }
-            else if (servico.tipo == 'A')
+
+            adicionou_servico = false;
+            melhor_servico = -1;
+            melhor_no = -1;
+            menor_custo = numeric_limits<double>::infinity();
+
+            for (int id_servico : servicos_nao_atribuidos)
             {
-                no_atual = servico.destino;
-            }
-            else
-            { // 'E'
-                no_atual = (melhor_no == servico.origem) ? servico.destino : servico.origem;
-            }
+                const Servico &servico = servicos[id_servico - 1];
 
-            // Remover o serviço da lista de não atribuídos
-            auto it = find(servicos_nao_atribuidos.begin(), servicos_nao_atribuidos.end(), melhor_servico);
-            if (it != servicos_nao_atribuidos.end())
-            {
-                servicos_nao_atribuidos.erase(it);
-            }
+                // Verificar capacidade
+                if (rota.demanda_total + servico.demanda > grafo.getCapacidade())
+                    continue;
 
-            // Continuar adicionando serviços enquanto for possível
-            bool adicionou_servico = true;
+                double custo_para_origem = grafo.getDistancia(no_atual, servico.origem);
+                double custo_para_destino = grafo.getDistancia(no_atual, servico.destino);
 
-            while (adicionou_servico && !servicos_nao_atribuidos.empty() &&
-                   rota.demanda_total < grafo.getCapacidade())
-            {
-                adicionou_servico = false;
+                double custo;
+                int no_entrada;
 
-                // Encontrar o serviço mais próximo do nó atual que pode ser atendido
-                int melhor_servico = -1;
-                int melhor_no = -1;
-                double menor_custo = numeric_limits<double>::infinity();
-
-                for (int i = 0; i < servicos_nao_atribuidos.size(); i++)
+                if (servico.tipo == 'N')
                 {
-                    int id_servico = servicos_nao_atribuidos[i];
-                    const Servico &servico = servicos[id_servico - 1];
-
-                    // Verificar se o serviço cabe na capacidade restante
-                    if (rota.demanda_total + servico.demanda <= grafo.getCapacidade())
-                    {
-                        // Calcular custo para chegar ao serviço
-                        double custo_para_origem = grafo.getDistancia(no_atual, servico.origem);
-                        double custo_para_destino = grafo.getDistancia(no_atual, servico.destino);
-
-                        // Escolher o nó de entrada (origem ou destino) com menor custo
-                        double custo;
-                        int no_entrada;
-
-                        if (servico.tipo == 'N')
-                        {
-                            custo = custo_para_origem;
-                            no_entrada = servico.origem;
-                        }
-                        else if (servico.tipo == 'A')
-                        {
-                            // Para arcos, só podemos entrar pela origem
-                            custo = custo_para_origem;
-                            no_entrada = servico.origem;
-                        }
-                        else
-                        { // 'E'
-                            // Para arestas, podemos entrar por qualquer extremidade
-                            if (custo_para_origem <= custo_para_destino)
-                            {
-                                custo = custo_para_origem;
-                                no_entrada = servico.origem;
-                            }
-                            else
-                            {
-                                custo = custo_para_destino;
-                                no_entrada = servico.destino;
-                            }
-                        }
-
-                        // Atualizar o melhor serviço encontrado
-                        if (custo < menor_custo)
-                        {
-                            menor_custo = custo;
-                            melhor_servico = id_servico;
-                            melhor_no = no_entrada;
-                        }
-                    }
+                    custo = custo_para_origem;
+                    no_entrada = servico.origem;
                 }
-
-                // Se encontrou um serviço viável
-                if (melhor_servico != -1)
+                else if (servico.tipo == 'A')
                 {
-                    const Servico &servico = servicos[melhor_servico - 1];
-
-                    // Adicionar o custo do caminho para o serviço
-                    rota.custo_total += grafo.getDistancia(no_atual, melhor_no);
-
-                    // Adicionar o serviço à rota
-                    rota.nos.push_back({melhor_servico, melhor_no});
-                    rota.demanda_total += servico.demanda;
-                    rota.custo_total += servico.custo_servico;
-
-                    // Atualizar o nó atual
-                    if (servico.tipo == 'N')
+                    custo = custo_para_origem;
+                    no_entrada = servico.origem;
+                }
+                else // 'E'
+                {
+                    if (custo_para_origem <= custo_para_destino)
                     {
-                        no_atual = servico.origem;
-                    }
-                    else if (servico.tipo == 'A')
-                    {
-                        no_atual = servico.destino;
+                        custo = custo_para_origem;
+                        no_entrada = servico.origem;
                     }
                     else
-                    { // 'E'
-                        no_atual = (melhor_no == servico.origem) ? servico.destino : servico.origem;
-                    }
-
-                    // Remover o serviço da lista de não atribuídos
-                    auto it = find(servicos_nao_atribuidos.begin(), servicos_nao_atribuidos.end(), melhor_servico);
-                    if (it != servicos_nao_atribuidos.end())
                     {
-                        servicos_nao_atribuidos.erase(it);
+                        custo = custo_para_destino;
+                        no_entrada = servico.destino;
                     }
+                }
 
-                    adicionou_servico = true;
+                if (custo < menor_custo)
+                {
+                    menor_custo = custo;
+                    melhor_servico = id_servico;
+                    melhor_no = no_entrada;
                 }
             }
 
-            // Adicionar o custo de volta ao depósito
-            rota.custo_total += grafo.getDistancia(no_atual, deposito);
+            if (melhor_servico != -1)
+            {
+                const Servico &servico = servicos[melhor_servico - 1];
 
-            // Adicionar a rota à solução
-            rotas.push_back(rota);
+                rota.custo_total += grafo.getDistancia(no_atual, melhor_no);
+                rota.nos.push_back({melhor_servico, melhor_no});
+                rota.demanda_total += servico.demanda;
+                rota.custo_total += servico.custo_servico;
 
-            cout << "Rota adicional criada com " << rota.nos.size() << " serviços, demanda " << rota.demanda_total
-                 << ", custo " << rota.custo_total << endl;
+                // Atualizar nó atual
+                if (servico.tipo == 'N')
+                {
+                    no_atual = servico.origem;
+                }
+                else if (servico.tipo == 'A')
+                {
+                    no_atual = servico.destino;
+                }
+                else // 'E'
+                {
+                    no_atual = (melhor_no == servico.origem) ? servico.destino : servico.origem;
+                }
+
+                // Remover serviço
+                auto it = find(servicos_nao_atribuidos.begin(), servicos_nao_atribuidos.end(), melhor_servico);
+                if (it != servicos_nao_atribuidos.end())
+                {
+                    servicos_nao_atribuidos.erase(it);
+                }
+
+                adicionou_servico = true;
+            }
         }
+
+        // Adicionar custo de retorno ao depósito
+        rota.custo_total += grafo.getDistancia(no_atual, deposito);
+
+        rotas.push_back(rota);
+
+        cout << "Rota " << contador_rotas << " criada: " << rota.nos.size()
+             << " serviços, demanda " << rota.demanda_total
+             << ", custo " << rota.custo_total << endl;
     }
 
-    // Transferir as rotas para a solução
+    // Finalizar solução
     solucao.rotas = rotas;
-
-    // Calcular custo total e número de rotas
-    solucao.num_rotas = solucao.rotas.size();
+    solucao.num_rotas = rotas.size();
     solucao.custo_total = 0;
 
-    for (const auto &rota : solucao.rotas)
+    for (const auto &rota : rotas)
     {
         solucao.custo_total += rota.custo_total;
     }
 
     solucao.tempo_execucao = clock() - inicio;
 
-    cout << "Solução inicial construída com sucesso!" << endl;
-    cout << "Total de rotas: " << solucao.num_rotas << ", Custo total: " << solucao.custo_total << endl;
+    cout << "Solução construída com " << solucao.num_rotas << " rotas e custo " << solucao.custo_total << endl;
 
     return solucao;
 }
-
 // Função para salvar a solução em arquivo
 void salvarSolucao(const string &nome_arquivo, const Solucao &solucao, const string &diretorio_saida, const Grafo &grafo)
 {
@@ -513,6 +367,7 @@ int main()
 {
     string diretorio_dados = "./dados/";
     string diretorio_saida = "./solucao/";
+    clock_t inicio = clock();
 
     // Criar o diretório de saída se não existir
     if (!fs::exists(diretorio_saida))
@@ -521,7 +376,7 @@ int main()
         cout << "Diretório de saída criado: " << diretorio_saida << endl;
     }
 
-    cout << "Iniciando processamento de instâncias CARP - Etapa 2" << endl;
+    cout << "Iniciando processamento de instâncias- Etapa 2" << endl;
     cout << "Buscando arquivos .dat em: " << diretorio_dados << endl;
     cout << "Salvando soluções em: " << diretorio_saida << endl;
 
@@ -569,7 +424,7 @@ int main()
                 grafo.lerArquivoDados(caminho_arquivo);
 
                 // Gerar solução inicial
-                Solucao solucao = solucaoInicial(grafo);
+                Solucao solucao = solucaoInicial(grafo, inicio);
 
                 // Salvar solução
                 salvarSolucao(nome_arquivo, solucao, diretorio_saida, grafo);
