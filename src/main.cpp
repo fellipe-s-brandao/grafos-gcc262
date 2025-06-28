@@ -1,6 +1,7 @@
 #include "core/grafo.h"
 #include "etapas/etapa1.h"
 #include "etapas/etapa2.h"
+#include "etapas/etapa3.h"
 #include <iostream>
 #include <string>
 
@@ -13,7 +14,8 @@ void mostrarMenu()
     cout << "=======================================" << endl;
     cout << "1. Etapa 1 - Análise de Métricas dos Grafos" << endl;
     cout << "2. Etapa 2 - Geração de Soluções Iniciais" << endl;
-    cout << "3. Executar Ambas as Etapas" << endl;
+    cout << "3. Etapa 3 - Otimização com 2-opt" << endl;
+    cout << "9. Informações sobre as Etapas" << endl;
     cout << "0. Sair" << endl;
     cout << "=======================================" << endl;
     cout << "Escolha uma opção: ";
@@ -30,8 +32,16 @@ void mostrarInformacoes()
     
     cout << "\nETAPA 2 - Geração de Soluções:" << endl;
     cout << "- Gera soluções iniciais para problemas de roteamento" << endl;
+    cout << "- Usa algoritmo guloso nearest neighbor" << endl;
     cout << "- Respeita capacidade dos veículos" << endl;
     cout << "- Salva soluções em formato específico" << endl;
+    
+    cout << "\nETAPA 3 - Otimização com 2-opt:" << endl;
+    cout << "- Aprimora as soluções da Etapa 2" << endl;
+    cout << "- Usa algoritmo de busca local 2-opt" << endl;
+    cout << "- Melhora o custo das rotas individualmente" << endl;
+    cout << "- Mantém todas as restrições de capacidade" << endl;
+    cout << "- Gera estatísticas de melhoria" << endl;
     cout << "\nPressione Enter para continuar...";
     cin.ignore();
     cin.get();
@@ -76,25 +86,17 @@ int main()
                 break;
                 
             case 3:
-                cout << "\n=== EXECUTANDO AMBAS AS ETAPAS ===" << endl;
+                cout << "\n=== EXECUTANDO ETAPA 3 ===" << endl;
                 try 
                 {
-                    cout << "\n--- Iniciando Etapa 1 ---" << endl;
-                    executarEtapa1();
-                    cout << "\n--- Etapa 1 Concluída ---" << endl;
-                    
-                    cout << "\n--- Iniciando Etapa 2 ---" << endl;
-                    executarEtapa2();
-                    cout << "\n--- Etapa 2 Concluída ---" << endl;
-                    
-                    cout << "\n=== TODAS AS ETAPAS CONCLUÍDAS ===" << endl;
+                    executarEtapa3();
                 }
                 catch (const exception& e)
                 {
-                    cerr << "Erro durante execução: " << e.what() << endl;
+                    cerr << "Erro na Etapa 3: " << e.what() << endl;
                 }
                 break;
-                
+
             case 9:
                 mostrarInformacoes();
                 break;

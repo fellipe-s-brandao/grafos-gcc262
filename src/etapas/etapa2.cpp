@@ -381,6 +381,8 @@ void salvarSolucao(const string &nome_arquivo, const Solucao &solucao, const str
         throw runtime_error("Erro ao criar o arquivo de solução: " + caminho_solucao);
     }
 
+    int deposito = grafo.getDeposito();
+
     // Escrever cabeçalho da solução
     arquivo << solucao.custo_total << endl;
     arquivo << solucao.num_rotas << endl;
@@ -392,11 +394,12 @@ void salvarSolucao(const string &nome_arquivo, const Solucao &solucao, const str
     {
         const Rota &rota = solucao.rotas[i];
 
-        // Índice do depósito (sempre 0), dia (sempre 1), ID da rota (começando por 1)
+        // Formato correto: índice_do_depósito(sempre 0) dia(sempre 1) id_rota demanda custo total_visitas
         arquivo << " 0 1 " << (i + 1) << " " << rota.demanda_total << " " << rota.custo_total << " " << (rota.nos.size() + 1) << " ";
 
-        // Primeiro nó é sempre o depósito
-        arquivo << "(D 0,1,1) ";
+        // CORREÇÃO: Formato correto do depósito
+        arquivo << "(D,0," << deposito << "," << deposito << ") ";
+
 
         // Escrever cada serviço na rota
         for (const auto &no : rota.nos)
@@ -407,7 +410,7 @@ void salvarSolucao(const string &nome_arquivo, const Solucao &solucao, const str
             if (id_servico == 0)
             {
                 // Se é o depósito
-                arquivo << "(D 0,1,1) ";
+                arquivo << "(D,0," << deposito << "," << deposito << ") ";
             }
             else
             {
@@ -438,7 +441,7 @@ void salvarSolucao(const string &nome_arquivo, const Solucao &solucao, const str
         }
 
         // Último nó é sempre o depósito
-        arquivo << "(D 0,1,1)" << endl;
+        arquivo << "(D,0," << deposito << "," << deposito << ")" << endl;
     }
 
     arquivo.close();
