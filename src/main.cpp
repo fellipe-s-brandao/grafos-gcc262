@@ -1,122 +1,121 @@
-#include "grafo.h"
+#include "core/grafo.h"
+#include "etapas/etapa1.h"
+#include "etapas/etapa2.h"
 #include <iostream>
-#include <fstream>
 #include <string>
-#include <vector>
-#include <filesystem>
 
-namespace fs = std::filesystem;
+using namespace std;
 
-// Estrutura para armazenar as métricas do grafo
-struct MetricasGrafo
+void mostrarMenu()
 {
-    string nome;
-    int num_vertices;
-    int num_arestas;
-    int num_arcos;
-    int num_vertices_obrigatorios;
-    int num_arestas_obrigatorias;
-    int num_arcos_obrigatorios;
-    double densidade;
-    int grau_minimo;
-    int grau_maximo;
-    double caminho_medio;
-    double diametro;
-    map<int, double> intermediacao;
-};
-
-// Função para processar um único arquivo de grafo
-MetricasGrafo processarArquivoGrafo(const string &caminho_arquivo)
-{
-    Grafo grafo;
-    grafo.lerArquivoDados(caminho_arquivo);
-
-    MetricasGrafo metricas;
-
-    // Salva as estatísticas do grafo
-    metricas.nome = grafo.getNomeArquivo();
-    metricas.num_vertices = grafo.getNumVertices();
-    metricas.num_arestas = grafo.getNumEdges();
-    metricas.num_arcos = grafo.getNumArcs();
-    metricas.num_vertices_obrigatorios = grafo.getNumRequiredVertices();
-    metricas.num_arestas_obrigatorias = grafo.getNumRequiredEdges();
-    metricas.num_arcos_obrigatorios = grafo.getNumRequiredArcs();
-    metricas.densidade = grafo.calcularDensidade();
-    metricas.grau_minimo = grafo.grausMinimo();
-    metricas.grau_maximo = grafo.grausMaximo();
-    metricas.caminho_medio = grafo.calcularCaminhoMedio();
-    metricas.diametro = grafo.calcularDiametro();
-    metricas.intermediacao = grafo.calcularIntermediacao();
-
-    return metricas;
+    cout << "\n=======================================" << endl;
+    cout << "    SISTEMA DE ANÁLISE DE GRAFOS" << endl;
+    cout << "=======================================" << endl;
+    cout << "1. Etapa 1 - Análise de Métricas dos Grafos" << endl;
+    cout << "2. Etapa 2 - Geração de Soluções Iniciais" << endl;
+    cout << "3. Executar Ambas as Etapas" << endl;
+    cout << "0. Sair" << endl;
+    cout << "=======================================" << endl;
+    cout << "Escolha uma opção: ";
 }
 
-// Função para exportar os resultados para um arquivo CSV
-void exportarParaCSV(const vector<MetricasGrafo> &todas_metricas, const string &arquivo_saida)
+void mostrarInformacoes()
 {
-    ofstream arquivo_csv(arquivo_saida);
-
-    // Cabeçalho
-    arquivo_csv << "Nome,Vertices,Arestas,Arcos,VerticesObrigatorios,ArestasObrigatorias,ArcosObrigatorios,Densidade,GrauMinimo,GrauMaximo,CaminhoMedio,Diametro\n";
-
-    // Dados de cada grafo
-    for (const auto &m : todas_metricas)
-    {
-        arquivo_csv << m.nome << ","
-                    << m.num_vertices << ","
-                    << m.num_arestas << ","
-                    << m.num_arcos << ","
-                    << m.num_vertices_obrigatorios << ","
-                    << m.num_arestas_obrigatorias << ","
-                    << m.num_arcos_obrigatorios << ","
-                    << m.densidade << ","
-                    << m.grau_minimo << ","
-                    << m.grau_maximo << ","
-                    << m.caminho_medio << ","
-                    << m.diametro << "\n";
-    }
-
-    arquivo_csv.close();
-
-    // Exportar a centralidade de intermediação separadamente
-    std::ofstream arquivo_intermediacao("resultados_intermediacao.csv");
-
-    // Cabeçalho
-    arquivo_intermediacao << "NomeGrafo,Vertice,CentralidadeIntermediacao\n";
-
-    // Dados de intermediação para cada grafo
-    for (const auto &m : todas_metricas)
-    {
-        for (const auto &[vertice, centralidade] : m.intermediacao)
-        {
-            arquivo_intermediacao << m.nome << ","
-                                  << vertice << ","
-                                  << centralidade << "\n";
-        }
-    }
-
-    arquivo_intermediacao.close();
+    cout << "\n=== INFORMAÇÕES DAS ETAPAS ===" << endl;
+    cout << "\nETAPA 1 - Análise de Métricas:" << endl;
+    cout << "- Calcula densidade, graus, caminho médio, diâmetro" << endl;
+    cout << "- Calcula centralidade de intermediação" << endl;
+    cout << "- Gera arquivos CSV com resultados" << endl;
+    cout << "- Processa todos os arquivos .dat do diretório" << endl;
+    
+    cout << "\nETAPA 2 - Geração de Soluções:" << endl;
+    cout << "- Gera soluções iniciais para problemas de roteamento" << endl;
+    cout << "- Respeita capacidade dos veículos" << endl;
+    cout << "- Salva soluções em formato específico" << endl;
+    cout << "\nPressione Enter para continuar...";
+    cin.ignore();
+    cin.get();
 }
 
 int main()
 {
-    string diretorio_dados = "../data/";
-    vector<MetricasGrafo> resultados;
-
-    // Processar cada arquivo .dat no diretório
-    for (const auto &entrada : fs::directory_iterator(diretorio_dados))
+    cout << "Bem-vindo ao Sistema de Análise de Grafos - GCC262" << endl;
+    
+    int opcao;
+    bool continuar = true;
+    
+    while (continuar)
     {
-        if (entrada.is_regular_file() && entrada.path().extension() == ".dat")
+        mostrarMenu();
+        cin >> opcao;
+        
+        switch (opcao)
         {
-            cout << "Processando: " << entrada.path().filename() << endl;
-            resultados.push_back(processarArquivoGrafo(entrada.path().string()));
+            case 1:
+                cout << "\n=== EXECUTANDO ETAPA 1 ===" << endl;
+                try 
+                {
+                    executarEtapa1();
+                }
+                catch (const exception& e)
+                {
+                    cerr << "Erro na Etapa 1: " << e.what() << endl;
+                }
+                break;
+                
+            case 2:
+                cout << "\n=== EXECUTANDO ETAPA 2 ===" << endl;
+                try 
+                {
+                    executarEtapa2();
+                }
+                catch (const exception& e)
+                {
+                    cerr << "Erro na Etapa 2: " << e.what() << endl;
+                }
+                break;
+                
+            case 3:
+                cout << "\n=== EXECUTANDO AMBAS AS ETAPAS ===" << endl;
+                try 
+                {
+                    cout << "\n--- Iniciando Etapa 1 ---" << endl;
+                    executarEtapa1();
+                    cout << "\n--- Etapa 1 Concluída ---" << endl;
+                    
+                    cout << "\n--- Iniciando Etapa 2 ---" << endl;
+                    executarEtapa2();
+                    cout << "\n--- Etapa 2 Concluída ---" << endl;
+                    
+                    cout << "\n=== TODAS AS ETAPAS CONCLUÍDAS ===" << endl;
+                }
+                catch (const exception& e)
+                {
+                    cerr << "Erro durante execução: " << e.what() << endl;
+                }
+                break;
+                
+            case 9:
+                mostrarInformacoes();
+                break;
+                
+            case 0:
+                cout << "Encerrando o programa..." << endl;
+                continuar = false;
+                break;
+                
+            default:
+                cout << "Opção inválida! Digite 9 para mais informações." << endl;
+                break;
+        }
+        
+        if (continuar && opcao != 9)
+        {
+            cout << "\nPressione Enter para continuar...";
+            cin.ignore();
+            cin.get();
         }
     }
-
-    // Exportar resultados
-    exportarParaCSV(resultados, "resultados_metricas_grafos.csv");
-
-    cout << "Processamento concluído. Resultados exportados para 'resultados_metricas_grafos.csv' e 'resultados_intermediacao.csv'\n";
-
+    
     return 0;
 }
